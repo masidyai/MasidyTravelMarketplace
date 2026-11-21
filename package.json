@@ -10,6 +10,8 @@
     "format": "oxfmt",
     "test:smoke": "node scripts/production-smoke.mjs",
     "test:production": "pnpm test:smoke && node scripts/production-quality.mjs",
+    "cloudflare:build": "opennextjs-cloudflare build",
+    "cloudflare:deploy": "opennextjs-cloudflare deploy",
     "generate:importmap": "NODE_OPTIONS=--no-deprecation payload generate:importmap",
     "generate:types": "NODE_OPTIONS=--no-deprecation payload generate:types",
     "payload": "NODE_OPTIONS=--no-deprecation payload"

@@ -1,0 +1,40 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "masidy-staging",
+  "main": ".open-next/worker.js",
+  "account_id": "e0de3cfc84733483abd97dc50b30ef01",
+  "compatibility_date": "2026-11-21",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "workers_dev": true,
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS",
+  },
+  "d1_databases": [
+    {
+      "binding": "D1",
+      "database_name": "masidy-staging-db",
+      "database_id": "d9851218-a17e-4ec1-ad85-d3d725447513",
+      "remote": true,
+    },
+  ],
+  "r2_buckets": [
+    {
+      "binding": "R2",
+      "bucket_name": "masidy-staging-media",
+    },
+    {
+      "binding": "NEXT_INC_CACHE_R2_BUCKET",
+      "bucket_name": "masidy-staging-cache",
+    },
+  ],
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "masidy-staging",
+    },
+  ],
+  "observability": {
+    "enabled": true,
+  },
+}

@@ -39,7 +39,9 @@ Not started. `masidy.travel` is not yet on Cloudflare.
 
 ## Human checkpoint H2
 
-Not started. `wrangler login` and account-ID confirmation are owner actions.
+Complete. Wrangler OAuth was authorized by the owner on 2026-11-21, and
+`wrangler whoami` succeeded. The confirmed account ID is
+`e0de3cfc84733483abd97dc50b30ef01`.
 
 ## Human checkpoint H3
 
@@ -47,7 +49,7 @@ Not started. Provider dashboard work is deferred to Phases 4 and 7.
 
 ## Phase 0 gate
 
-Waiting for owner review and approval of `docs/migration/AUDIT.md`.
+Approved by the owner before Phase 1 began.
 
 ## Phase 0 validation
 
@@ -104,9 +106,34 @@ Waiting for owner review and approval of `docs/migration/AUDIT.md`.
   was ignored; local Workers preview/deploy still needs its install script
   approved and verified.
 - No lint script is configured in `package.json`.
-- No Wrangler login has been attempted. Owner action is now unblocked:
-  run `pnpm exec wrangler login` locally and confirm the account ID. No
-  Cloudflare credentials belong in `.env.local`.
-- Build verification remains blocked by the Figma Make config requiring
-  platform-provided `FIGMA_EID` outside its lifecycle environment. No dummy
-  environment values were supplied.
+- Wrangler 4.166.0 OAuth is authorized; `wrangler whoami` succeeds and
+  confirms the account ID above. No Cloudflare credentials belong in
+  `.env.local`.
+- The original Figma build remains blocked outside Make by the platform-owned
+  `FIGMA_EID`. No dummy environment values were supplied.
+
+## Phase 1 staging resources and configuration
+
+- Listed existing account resources before creation. Existing
+  `travel-marketplace-production`, `vibesdk-db`, `travel-marketplace-media`,
+  and `vibesdk-templates` resources were left untouched.
+- Created the approved staging D1 database `masidy-staging-db` in WEUR with ID
+  `d9851218-a17e-4ec1-ad85-d3d725447513`.
+- Created `masidy-staging-media` and `masidy-staging-cache` R2 buckets with the
+  Standard storage class.
+- Added `wrangler.jsonc`, `open-next.config.ts`, and a separate minimal
+  `src/payload.cloudflare.config.ts`. The Figma config remains the default;
+  only the OpenNext build wrapper selects the Cloudflare config. Generated
+  Wrangler binding types are in `worker-configuration.d.ts`.
+- Read the current official Payload `with-cloudflare-d1` template. Its main
+  branch currently targets beta.11, so only its compatible configuration
+  approach was used; project adapters remain pinned to Payload beta.8.
+- TypeScript passes after generating Worker binding types.
+- The Cloudflare production build is currently blocked by the existing
+  Payload-managed `src/app/(payload)/layout.tsx` importing missing
+  `src/app/(payload)/custom.css`. That managed directory was not edited.
+- A staging Worker deployment has not been attempted. It also requires the
+  owner to set `PAYLOAD_SECRET` with Wrangler; the secret value must not be
+  placed in chat or `.env.local`.
+- The local `workerd` postinstall remains unapproved, so local Workers runtime
+  preview has not been tested.
