@@ -29,11 +29,9 @@
    behavior remain a staging result.
 2. Cloudflare Images transformations for R2 files and plan inclusion remain
    unverified.
-3. OpenNext exact override paths and Durable Object bindings remain unverified
-   until the installed package version is selected.
-4. Workers AI quality remains unverified.
-5. File/malware scanning availability on the selected plan remains unverified.
-6. Email Service beta volume and deliverability remain unverified.
+3. Workers AI quality remains unverified.
+4. File/malware scanning availability on the selected plan remains unverified.
+5. Email Service beta volume and deliverability remain unverified.
 
 ## Human checkpoint H1
 
@@ -63,3 +61,52 @@ Waiting for owner review and approval of `docs/migration/AUDIT.md`.
 - Direct `pnpm exec payload build`: blocked because ordinary shell execution
   is outside the Figma Make lifecycle and `FIGMA_EID`/platform configuration
   is unavailable.
+
+## Phase 1 preparation
+
+- Current registry versions checked: `@opennextjs/cloudflare@1.20.18` and
+  `wrangler@4.166.0`. Wrangler 4.166.0 satisfies OpenNext's declared
+  `wrangler` peer range `^4.148.0`.
+- OpenNext 1.20.18 requires Next `>=16.4.5` for Next 16. The project is on
+  Next 16.4.2. Payload's `@payloadcms/next@4.0.0-beta.8` allows
+  `next >=16.4.1 <17.0.0`, so Next 16.4.5 is the smallest verified compatible
+  patch upgrade.
+- The project-pinned D1 and R2 adapters remain exact beta.8 versions.
+- The current OpenNext docs verify these overrides:
+  - `@opennextjs/cloudflare/overrides/incremental-cache/r2-incremental-cache`
+  - `@opennextjs/cloudflare/overrides/queue/do-queue`
+  - `@opennextjs/cloudflare/overrides/tag-cache/do-sharded-tag-cache`
+- For on-demand revalidation, OpenNext documents
+  `NEXT_CACHE_DO_QUEUE` / `DOQueueHandler` and
+  `NEXT_TAG_CACHE_DO_SHARDED` / `DOShardedTagCache` bindings. The queue
+  migration uses SQLite Durable Object classes. A self-reference service
+  binding is also documented.
+- The Cloudflare caching docs state that Cache API purge is only available on a
+  zone/custom domain. If configured with durable-object purging, use
+  `@opennextjs/cloudflare/overrides/cache-purge/index` and the
+  `NEXT_CACHE_DO_PURGE` / `BucketCachePurge` binding.
+- Next 16.4.2's CLI docs verify `next build --webpack` is the webpack flag.
+- `mise install` installed the project-pinned Node 24.22.1, but refused the
+  project-pinned `npm:pnpm@10.34.3` with a supply-chain trust downgrade error:
+  pnpm 10.20.0 had trusted-publisher evidence, but 10.34.3 did not. The 10.34.3
+  npm registry integrity/signature and signed GitHub release tag were checked;
+  the owner approved a narrow local-only exception for exactly
+  `pnpm@10.34.3`. It is stored in the ignored `.mise.local.toml` override and
+  is not part of the repository.
+- Added exact dependencies using project-pinned pnpm 10.34.3:
+  `@opennextjs/cloudflare@1.20.18`,
+  `@payloadcms/db-d1-sqlite@4.0.0-beta.8`,
+  `@payloadcms/storage-r2@4.0.0-beta.8`, and `wrangler@4.166.0`.
+  Next was updated to 16.4.5 to meet OpenNext's peer range. Figma remains
+  installed and `buildFigmaConfig()` is unchanged.
+- Wrangler reports version 4.166.0. TypeScript check and migration file
+  formatting pass. The install warns that `workerd@1.20261119.1`'s postinstall
+  was ignored; local Workers preview/deploy still needs its install script
+  approved and verified.
+- No lint script is configured in `package.json`.
+- No Wrangler login has been attempted. Owner action is now unblocked:
+  run `pnpm exec wrangler login` locally and confirm the account ID. No
+  Cloudflare credentials belong in `.env.local`.
+- Build verification remains blocked by the Figma Make config requiring
+  platform-provided `FIGMA_EID` outside its lifecycle environment. No dummy
+  environment values were supplied.
