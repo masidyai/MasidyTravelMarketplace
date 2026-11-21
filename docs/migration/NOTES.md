@@ -125,15 +125,17 @@ Approved by the owner before Phase 1 began.
   `src/payload.cloudflare.config.ts`. The Figma config remains the default;
   only the OpenNext build wrapper selects the Cloudflare config. Generated
   Wrangler binding types are in `worker-configuration.d.ts`.
+- Added the owner-confirmed empty `src/app/(payload)/custom.css` required by
+  the generated layout. A Cloudflare-only `tsconfig` and admin import map keep
+  Figma-specific build paths out of the staging build.
 - Read the current official Payload `with-cloudflare-d1` template. Its main
   branch currently targets beta.11, so only its compatible configuration
   approach was used; project adapters remain pinned to Payload beta.8.
 - TypeScript passes after generating Worker binding types.
-- The Cloudflare production build is currently blocked by the existing
-  Payload-managed `src/app/(payload)/layout.tsx` importing missing
-  `src/app/(payload)/custom.css`. That managed directory was not edited.
-- A staging Worker deployment has not been attempted. It also requires the
-  owner to set `PAYLOAD_SECRET` with Wrangler; the secret value must not be
-  placed in chat or `.env.local`.
+- The Cloudflare build compiles with webpack and no longer fails on Figma
+  initialization. Page-data collection now requires `PAYLOAD_SECRET`, which
+  has not been provided to the local build environment. Set it locally without
+  sharing the value, then add it to the deployed Worker through Wrangler.
+- A staging Worker deployment has not been attempted.
 - The local `workerd` postinstall remains unapproved, so local Workers runtime
   preview has not been tested.

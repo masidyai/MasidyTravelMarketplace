@@ -56,6 +56,8 @@ const nextConfig: NextConfig = {
       webpackConfig.resolve.alias = {
         ...webpackConfig.resolve.alias,
         '@payload-config': path.resolve(dirname, payloadConfigPath),
+        './admin/importMap.js$': path.resolve(dirname, 'src/payload.cloudflare-import-map.ts'),
+        sharp$: path.resolve(dirname, 'src/lib/cloudflare-sharp.ts'),
       }
     }
 
@@ -65,6 +67,29 @@ const nextConfig: NextConfig = {
     root: path.resolve(dirname),
   },
   ...(!isCloudflareBuild ? { output: 'standalone' as const } : {}),
+  ...(isCloudflareBuild
+    ? {
+        transpilePackages: ['sharp'],
+        outputFileTracingExcludes: {
+          '/*': [
+            './node_modules/sharp/**/*',
+            './node_modules/.pnpm/sharp@*/**',
+            './node_modules/.pnpm/next@*/node_modules/sharp',
+            './node_modules/.pnpm/next@*/node_modules/sharp/**',
+            './node_modules/@img/sharp-*/**',
+            './node_modules/.pnpm/@img+sharp-*/**',
+          ],
+          'next-server': [
+            './node_modules/sharp/**/*',
+            './node_modules/.pnpm/sharp@*/**',
+            './node_modules/.pnpm/next@*/node_modules/sharp',
+            './node_modules/.pnpm/next@*/node_modules/sharp/**',
+            './node_modules/@img/sharp-*/**',
+            './node_modules/.pnpm/@img+sharp-*/**',
+          ],
+        },
+      }
+    : {}),
   images: {
     loader: 'custom',
     loaderFile: './figma-image-loader.ts',
@@ -72,6 +97,7 @@ const nextConfig: NextConfig = {
   // Don't block publishing or preview deploys on errors if the emitted JS is valid
   typescript: {
     ignoreBuildErrors: true,
+    ...(isCloudflareBuild ? { tsconfigPath: 'tsconfig.cloudflare.json' } : {}),
   },
   // `next dev` serves the Make preview at a per-sandbox cross-origin host. Next
   // blocks its dev resources (`/_next/*`, HMR WebSocket, internal endpoints)
@@ -84,7 +110,7 @@ const nextConfig: NextConfig = {
   enablePrerenderSourceMaps: false,
   experimental: {
     // Caps static build workers (~250-380 MB each) to lower `next build` peak memory
-    cpus: 2,
+    cpus: isCloudflareBuild ? 1 : 2,
     // Payload Admin uses Next Server Actions. In the Make preview proxy, the
     // browser origin is the public sandbox host while `x-forwarded-host` points
     // at the local dev server. Preserve that exact platform-provisioned host
@@ -116,7 +142,30 @@ const nextConfig: NextConfig = {
           FIGMA_OAUTH_CLIENT_ID: process.env.FIGMA_OAUTH_CLIENT_ID,
         }
       : {}),
+    ...(isCloudflareBuild ? { MASIDY_CLOUDFLARE_MINIMAL_STAGING: '1' } : {}),
   },
 }
 
-export default withPayload(nextConfig, { devBundleServerPackages: false })
+const payloadConfig = withPayload(nextConfig, { devBundleServerPackages: false })
+const payloadWebpack = payloadConfig.webpack
+
+const finalConfig: NextConfig = isCloudflareBuild
+  ? {
+      ...payloadConfig,
+      serverExternalPackages: payloadConfig.serverExternalPackages?.filter(
+        (packageName) => packageName !== 'sharp',
+      ),
+      webpack: (webpackConfig, webpackOptions) => {
+        const resolvedConfig = payloadWebpack?.(webpackConfig, webpackOptions) ?? webpackConfig
+
+        return {
+          ...resolvedConfig,
+          externals: Array.isArray(resolvedConfig.externals)
+            ? resolvedConfig.externals.filter((external: unknown) => external !== 'sharp')
+            : resolvedConfig.externals,
+        }
+      },
+    }
+  : payloadConfig
+
+export default finalConfig

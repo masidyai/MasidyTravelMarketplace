@@ -2,21 +2,36 @@ import { sqliteD1Adapter } from '@payloadcms/db-d1-sqlite'
 import { r2Storage } from '@payloadcms/storage-r2'
 import { getCloudflareContext } from '@opennextjs/cloudflare'
 import { en as adminLanguage } from '@payloadcms/translations/languages/en'
-import { buildConfig, type PayloadLogger } from 'payload'
+import { buildConfig, type CollectionConfig, type PayloadLogger } from 'payload'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { GetPlatformProxyOptions } from 'wrangler'
 
 import { Admins } from './collections/Admins'
-import { Folders } from './collections/Folders'
-import { Media } from './collections/Media'
-import { Tags } from './collections/Tags'
-import { Users } from './collections/Users'
+
+const CloudflareMedia: CollectionConfig = {
+  slug: 'media',
+  access: {
+    create: ({ req }) => req.user?.collection === Admins.slug,
+    delete: ({ req }) => req.user?.collection === Admins.slug,
+    read: () => true,
+    update: ({ req }) => req.user?.collection === Admins.slug,
+  },
+  fields: [{ name: 'alt', type: 'text', required: true }],
+  upload: {
+    crop: false,
+    focalPoint: false,
+  },
+}
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 const realpath = (value: string) => (fs.existsSync(value) ? fs.realpathSync(value) : undefined)
+const isCloudflareMinimalBuild =
+  process.env.PAYLOAD_CONFIG_PATH?.replaceAll('\\', '/').endsWith(
+    'src/payload.cloudflare.config.ts',
+  ) && process.env.NEXT_PHASE === 'phase-production-build'
 
 const isPayloadCLI = process.argv.some((value) => {
   const resolved = realpath(value)
@@ -24,10 +39,9 @@ const isPayloadCLI = process.argv.some((value) => {
 })
 const isProduction = process.env.NODE_ENV === 'production'
 const payloadSecret = process.env.PAYLOAD_SECRET
-const isNextBuild = process.env.NEXT_PHASE === 'phase-production-build'
 
-if (!payloadSecret && !isNextBuild) {
-  throw new Error('PAYLOAD_SECRET must be set for the Cloudflare Payload runtime.')
+if (!payloadSecret) {
+  throw new Error('PAYLOAD_SECRET must be set for Cloudflare builds and deployments.')
 }
 
 const createLog =
@@ -51,7 +65,7 @@ const cloudflareLogger = {
 } as unknown as PayloadLogger
 
 const cloudflare =
-  isPayloadCLI || !isProduction
+  isPayloadCLI || !isProduction || isCloudflareMinimalBuild
     ? await getCloudflareContextFromWrangler()
     : await getCloudflareContext({ async: true })
 
@@ -62,7 +76,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Admins, Users, Media, Folders, Tags],
+  collections: [Admins, CloudflareMedia],
   graphQL: {
     disable: true,
   },
@@ -70,7 +84,7 @@ export default buildConfig({
     fallbackLanguage: 'en',
     supportedLanguages: { en: adminLanguage },
   },
-  secret: payloadSecret ?? '',
+  secret: payloadSecret,
   db: sqliteD1Adapter({ binding: cloudflare.env.D1 }),
   storage: [
     r2Storage({
@@ -89,7 +103,7 @@ function getCloudflareContextFromWrangler() {
     ({ getPlatformProxy }) =>
       getPlatformProxy({
         environment: process.env.CLOUDFLARE_ENV,
-        remoteBindings: isProduction,
+        remoteBindings: isProduction && !isCloudflareMinimalBuild,
       } satisfies GetPlatformProxyOptions),
   )
 }
