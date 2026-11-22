@@ -141,8 +141,12 @@ Approved by the owner before Phase 1 began.
   binding targeted the nonexistent `masidy-staging` Worker. Account inspection
   confirmed the CI Worker has no custom routes. The Wrangler worker name and
   self-reference now match CI; all D1/R2 bindings remain on staging resources.
-- `masidy.travel` is not routed to the CI Worker; its current `Hello world`
-  response remains untouched.
+- The CI Worker is also attached to the `masidy.travel` custom domain. Its
+  first successful deployment exposed a missing runtime `PAYLOAD_SECRET`
+  binding; the original Worker environment values were restored as secret
+  bindings without changing or displaying their values.
+- The Google provider initially advertised the previous staging hostname as
+  its callback URL. The Worker now declares `AUTH_URL=https://masidy.travel`.
 - The local `workerd` postinstall remains unapproved, so local Workers runtime
   preview has not been tested.
 - A Workers Builds log showed that `pnpm run build` invoked the Figma Payload
