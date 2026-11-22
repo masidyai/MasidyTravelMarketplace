@@ -9,6 +9,9 @@ import { fileURLToPath } from 'node:url'
 import type { GetPlatformProxyOptions } from 'wrangler'
 
 import { Admins } from './collections/Admins'
+import { AuthAccounts } from './collections/AuthAccounts'
+import { AuthVerificationTokens } from './collections/AuthVerificationTokens'
+import { Users } from './collections/Users'
 
 const CloudflareMedia: CollectionConfig = {
   slug: 'media',
@@ -77,7 +80,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Admins, CloudflareMedia],
+  collections: [Admins, Users, AuthAccounts, AuthVerificationTokens, CloudflareMedia],
   graphQL: {
     disable: true,
   },

@@ -147,6 +147,11 @@ Approved by the owner before Phase 1 began.
   bindings without changing or displaying their values.
 - The Google provider initially advertised the previous staging hostname as
   its callback URL. The Worker now declares `AUTH_URL=https://masidy.travel`.
+- Google sign-in then exposed that the reduced Cloudflare Payload config omitted
+  `Users`, `AuthAccounts`, and `AuthVerificationTokens`, which the existing
+  NextAuth adapter requires. The staging D1 database initially contained no
+  Payload tables. These collections are now registered, and the Payload CLI
+  generated and applied an additive initial schema migration to staging D1.
 - The local `workerd` postinstall remains unapproved, so local Workers runtime
   preview has not been tested.
 - A Workers Builds log showed that `pnpm run build` invoked the Figma Payload

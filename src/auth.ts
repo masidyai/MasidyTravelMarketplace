@@ -10,12 +10,14 @@ import {
 } from '@/lib/session-cookie'
 import { getPayloadClient } from '@/lib/payload'
 
+const runtimeEnv: Record<string, string | undefined> = process.env
+
 if (
-  !process.env.AUTH_URL &&
-  process.env.NEXT_PUBLIC_SITE_URL &&
-  !process.env.NEXT_PUBLIC_SITE_URL.includes('localhost')
+  !runtimeEnv.AUTH_URL &&
+  runtimeEnv.NEXT_PUBLIC_SITE_URL &&
+  !runtimeEnv.NEXT_PUBLIC_SITE_URL.includes('localhost')
 ) {
-  process.env.AUTH_URL = process.env.NEXT_PUBLIC_SITE_URL
+  runtimeEnv.AUTH_URL = runtimeEnv.NEXT_PUBLIC_SITE_URL
 }
 
 const providers: Provider[] = []
