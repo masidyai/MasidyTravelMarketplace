@@ -4,12 +4,15 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ArrowLeft, ArrowRight, BadgeCheck, Globe2, MapPin, Star } from 'lucide-react'
 import { getMarketplaceData } from '@/lib/marketplace-data'
+import { isCloudflareMinimalStaging } from '@/lib/payload'
 import { getPublicAgency } from '@/lib/public-records'
 import type { Media } from '@/payload-types'
 
 export const dynamic = 'force-static'
 
 export async function generateStaticParams() {
+  if (isCloudflareMinimalStaging) return []
+
   const { agencies } = await getMarketplaceData()
   return agencies.map((agency) => ({ slug: agency.slug }))
 }

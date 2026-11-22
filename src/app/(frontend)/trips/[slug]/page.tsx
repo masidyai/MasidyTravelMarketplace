@@ -14,6 +14,7 @@ import {
   X,
 } from 'lucide-react'
 import { getMarketplaceData } from '@/lib/marketplace-data'
+import { isCloudflareMinimalStaging } from '@/lib/payload'
 import { getPublicTrip } from '@/lib/public-records'
 import type { Agency, Media, User } from '@/payload-types'
 import TripActions from './trip-actions'
@@ -22,6 +23,8 @@ import SaveTripButton from '../../save-trip-button'
 export const dynamic = 'force-static'
 
 export async function generateStaticParams() {
+  if (isCloudflareMinimalStaging) return []
+
   const { trips } = await getMarketplaceData()
   return trips.map((trip) => ({ slug: trip.slug }))
 }
