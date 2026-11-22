@@ -2,7 +2,7 @@ import 'server-only'
 
 import { unstable_cache } from 'next/cache'
 import type { Agency, Media, Trip } from '@/payload-types'
-import { getPayloadClient, isCloudflareMinimalStaging } from '@/lib/payload'
+import { getPayloadClient } from '@/lib/payload'
 
 export type PublicTrip = {
   id: string
@@ -56,8 +56,6 @@ async function loadMarketplaceData(options?: { demo?: boolean }): Promise<{
   trips: PublicTrip[]
   agencies: PublicAgency[]
 }> {
-  if (isCloudflareMinimalStaging) return { trips: [], agencies: [] }
-
   const payload = await getPayloadClient()
   const demo = options?.demo === true
   const [tripResult, agencyResult] = await Promise.all([
@@ -133,7 +131,7 @@ async function loadMarketplaceData(options?: { demo?: boolean }): Promise<{
 
 export const getMarketplaceData = unstable_cache(
   () => loadMarketplaceData(),
-  ['marketplace-data'],
+  ['marketplace-data-runtime-v2'],
   {
     tags: ['marketplace'],
     // Hooks invalidate immediately in Admin/app requests; this is a resilient
@@ -144,7 +142,7 @@ export const getMarketplaceData = unstable_cache(
 
 export const getDemoMarketplaceData = unstable_cache(
   () => loadMarketplaceData({ demo: true }),
-  ['demo-marketplace-data-v2'],
+  ['demo-marketplace-data-runtime-v3'],
   {
     tags: ['marketplace'],
     revalidate: 60,
