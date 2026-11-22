@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "NODE_OPTIONS=--no-deprecation next dev --port ${PORT:-3000} --hostname 0.0.0.0",
-    "build": "NODE_OPTIONS=--no-deprecation payload build",
+    "build": "pnpm run cloudflare:build",
+    "figma:build": "NODE_OPTIONS=--no-deprecation payload build",
     "start": "NODE_OPTIONS=--no-deprecation next start",
     "format": "oxfmt",
     "test:smoke": "node scripts/production-smoke.mjs",

@@ -139,3 +139,9 @@ Approved by the owner before Phase 1 began.
 - A staging Worker deployment has not been attempted.
 - The local `workerd` postinstall remains unapproved, so local Workers runtime
   preview has not been tested.
+- A Workers Builds log showed that `pnpm run build` invoked the Figma Payload
+  build and failed while resolving `FIGMA_EID`. The default `build` script now
+  uses the Cloudflare OpenNext build; Figma Make deploy scripts use the separate
+  `figma:build` script. This keeps Figma out of the Cloudflare build path
+  without removing the existing Figma app. Build-time variables are separate
+  from deployed Worker secrets.
