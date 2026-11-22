@@ -32,6 +32,7 @@ const isCloudflareMinimalBuild =
   process.env.PAYLOAD_CONFIG_PATH?.replaceAll('\\', '/').endsWith(
     'src/payload.cloudflare.config.ts',
   ) && process.env.NEXT_PHASE === 'phase-production-build'
+const isCloudflareBuildStep = process.env.MASIDY_CLOUDFLARE_BUILD === '1'
 
 const isPayloadCLI = process.argv.some((value) => {
   const resolved = realpath(value)
@@ -40,8 +41,8 @@ const isPayloadCLI = process.argv.some((value) => {
 const isProduction = process.env.NODE_ENV === 'production'
 const payloadSecret = process.env.PAYLOAD_SECRET
 
-if (!payloadSecret) {
-  throw new Error('PAYLOAD_SECRET must be set for Cloudflare builds and deployments.')
+if (!payloadSecret && !isCloudflareBuildStep) {
+  throw new Error('PAYLOAD_SECRET must be set for the Cloudflare Worker runtime.')
 }
 
 const createLog =
@@ -84,7 +85,7 @@ export default buildConfig({
     fallbackLanguage: 'en',
     supportedLanguages: { en: adminLanguage },
   },
-  secret: payloadSecret,
+  secret: payloadSecret ?? '',
   db: sqliteD1Adapter({ binding: cloudflare.env.D1 }),
   storage: [
     r2Storage({

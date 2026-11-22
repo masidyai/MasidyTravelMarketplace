@@ -6,6 +6,7 @@ const result = spawnSync(process.execPath, [nextCLI, 'build', '--webpack'], {
   env: {
     ...process.env,
     PAYLOAD_CONFIG_PATH: 'src/payload.cloudflare.config.ts',
+    MASIDY_CLOUDFLARE_BUILD: '1',
   },
   stdio: 'inherit',
 })

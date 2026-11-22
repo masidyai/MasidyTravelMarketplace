@@ -145,3 +145,6 @@ Approved by the owner before Phase 1 began.
   `figma:build` script. This keeps Figma out of the Cloudflare build path
   without removing the existing Figma app. Build-time variables are separate
   from deployed Worker secrets.
+- Next.js imports the Cloudflare Payload config during page-data collection.
+  The Cloudflare build wrapper now marks this build-only config load; the
+  config still throws if `PAYLOAD_SECRET` is absent when the Worker runs.
