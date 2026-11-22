@@ -2,7 +2,6 @@
 
 import { getCurrentUser } from '@/lib/current-user'
 import { getPayloadClient } from '@/lib/payload'
-import { hasRequiredConsents } from '@/lib/required-consents'
 
 export type ApplicationState = {
   status: 'idle' | 'success' | 'error'
@@ -35,9 +34,6 @@ export async function submitApplication(
 ): Promise<ApplicationState> {
   const user = await getCurrentUser()
   if (!user) return { status: 'error', message: 'Sign in to submit an application.' }
-  if (!(await hasRequiredConsents(user))) {
-    return { status: 'error', message: 'Accept the Terms and Privacy Policy before applying.' }
-  }
 
   const type = value(formData, 'type')
   const businessName = value(formData, 'businessName')

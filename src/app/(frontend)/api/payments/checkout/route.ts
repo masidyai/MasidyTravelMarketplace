@@ -2,15 +2,11 @@ import { getCurrentUser } from '@/lib/current-user'
 import { getPayloadClient } from '@/lib/payload'
 import { getStripeClient } from '@/lib/stripe'
 import { enforceRateLimit } from '@/lib/rate-limit'
-import { hasRequiredConsents } from '@/lib/required-consents'
 
 export async function POST(request: Request) {
   const user = await getCurrentUser()
   if (!user) {
     return Response.json({ error: 'Sign in to continue.' }, { status: 401 })
-  }
-  if (!(await hasRequiredConsents(user))) {
-    return Response.json({ error: 'Accept the Terms and Privacy Policy first.' }, { status: 403 })
   }
   try {
     await enforceRateLimit(String(user.id), 'checkout', 10, 15 * 60 * 1000)
