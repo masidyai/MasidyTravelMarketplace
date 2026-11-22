@@ -107,7 +107,6 @@ Open **Make settings → Secrets** and provide:
 - `AUTH_SECRET`
 - `AUTH_GOOGLE_ID`
 - `AUTH_GOOGLE_SECRET`
-- `APP_OPENAI_API_KEY`
 - `STRIPE_SECRET_KEY`
 - `STRIPE_WEBHOOK_SECRET`
 - `RESEND_API_KEY`
@@ -118,6 +117,9 @@ Open **Make settings → Secrets** and provide:
 - `FILE_SCAN_API_URL`
 - `FILE_SCAN_API_KEY`
 - `CRON_SECRET`
+
+Masidy Make uses the Cloudflare Workers AI binding configured in `wrangler.jsonc`;
+it does not require an OpenAI API key.
 
 Do not paste secret values into chat, source code, Payload records, or public
 environment variables.

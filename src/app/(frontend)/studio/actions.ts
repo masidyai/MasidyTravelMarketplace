@@ -1,5 +1,6 @@
 'use server'
 
+import { getCloudflareContext } from '@opennextjs/cloudflare'
 import { getCurrentUser } from '@/lib/current-user'
 import { getPayloadClient } from '@/lib/payload'
 
@@ -22,6 +23,30 @@ const allowedTypes = [
   'proposal',
   'support-assistant',
 ] as const
+
+const moderationModel = '@cf/meta/llama-guard-3-8b'
+const generationModel = '@cf/openai/gpt-oss-20b'
+
+function isSafeRequest(
+  response: string | { safe?: boolean } | undefined,
+): boolean | undefined {
+  if (typeof response === 'object' && response !== null) {
+    return typeof response.safe === 'boolean' ? response.safe : undefined
+  }
+  if (typeof response !== 'string') return undefined
+
+  const normalized = response.trim().toLowerCase()
+  if (normalized === 'safe' || normalized.startsWith('safe\n')) return true
+  if (normalized === 'unsafe' || normalized.startsWith('unsafe\n')) return false
+
+  try {
+    const parsed: unknown = JSON.parse(response)
+    if (typeof parsed !== 'object' || parsed === null || !('safe' in parsed)) return undefined
+    return typeof parsed.safe === 'boolean' ? parsed.safe : undefined
+  } catch {
+    return undefined
+  }
+}
 
 export async function generateProject(
   _previousState: StudioState,
@@ -47,12 +72,10 @@ export async function generateProject(
       message: 'Describe what you need in at least 20 characters.',
     }
   }
-  if (!process.env.APP_OPENAI_API_KEY) {
-    return {
-      status: 'error',
-      message:
-        'Masidy Make is fully wired. Add APP_OPENAI_API_KEY in Make Secrets to activate generation.',
-    }
+  const { env } = await getCloudflareContext({ async: true })
+  const ai = env.AI
+  if (!ai) {
+    return { status: 'error', message: 'Workers AI is not enabled for this deployment.' }
   }
   const payload = await getPayloadClient()
   const today = new Date()
@@ -131,26 +154,26 @@ context and never expose unrelated customer data: ${JSON.stringify(workspaceCont
 Do not claim integrations or facts not supplied.`
 
   try {
-    const moderation = await fetch('https://api.openai.com/v1/moderations', {
-      method: 'POST',
-      headers: {
-        authorization: `Bearer ${process.env.APP_OPENAI_API_KEY}`,
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({ model: 'omni-moderation-latest', input: prompt }),
-      signal: AbortSignal.timeout(20_000),
+    const moderation = await ai.run(moderationModel, {
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: 128,
+      temperature: 0,
     })
-    const moderationResult = (await moderation.json()) as {
-      results?: Array<{ flagged?: boolean }>
-    }
-    if (!moderation.ok || moderationResult.results?.[0]?.flagged) {
+    const safe = isSafeRequest(moderation.response)
+    if (safe === undefined) throw new Error('Workers AI moderation returned an invalid result.')
+    if (!safe) {
+      const inputTokens = moderation.usage?.prompt_tokens ?? 0
+      const outputTokens = moderation.usage?.completion_tokens ?? 0
       await payload.create({
         collection: 'ai-usage',
         overrideAccess: true,
         draft: false,
         data: {
           owner: user.id,
-          model: 'omni-moderation-latest',
+          model: moderationModel,
+          inputTokens,
+          outputTokens,
+          estimatedCostUsd: (inputTokens * 0.000000484 + outputTokens * 0.00000003),
           moderationFlagged: true,
           status: 'blocked',
         },
@@ -160,32 +183,18 @@ Do not claim integrations or facts not supplied.`
         message: 'This request was blocked by content safety controls.',
       }
     }
-    const response = await fetch('https://api.openai.com/v1/responses', {
-      method: 'POST',
-      headers: {
-        authorization: `Bearer ${process.env.APP_OPENAI_API_KEY}`,
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4.1-mini',
-        instructions,
-        input: prompt,
-      }),
-      signal: AbortSignal.timeout(60_000),
+    const generated = await ai.run(generationModel, {
+      messages: [
+        { role: 'system', content: instructions },
+        { role: 'user', content: prompt },
+      ],
+      max_tokens: 1600,
+      reasoning_effort: 'low',
     })
-    if (!response.ok) throw new Error(`OpenAI request failed with ${response.status}`)
-    const result = (await response.json()) as {
-      output_text?: string
-      output?: Array<{ content?: Array<{ text?: string }> }>
-      usage?: { input_tokens?: number; output_tokens?: number }
-    }
     const output =
-      result.output_text ||
-      result.output
-        ?.flatMap((item) => item.content ?? [])
-        .map((item) => item.text ?? '')
-        .join('\n')
-        .trim()
+      generated.choices?.[0]?.message.content?.trim() ??
+      generated.output_text?.trim() ??
+      ''
     if (!output) throw new Error('The generation returned no content.')
 
     const paragraphs = output
@@ -218,8 +227,19 @@ Do not claim integrations or facts not supplied.`
         status: 'ready',
       } as never,
     })
-    const inputTokens = result.usage?.input_tokens ?? 0
-    const outputTokens = result.usage?.output_tokens ?? 0
+    const usage = generated.usage
+    const inputTokens = usage
+      ? 'input_tokens' in usage
+        ? usage.input_tokens
+        : usage.prompt_tokens
+      : 0
+    const outputTokens = usage
+      ? 'output_tokens' in usage
+        ? usage.output_tokens
+        : usage.completion_tokens
+      : 0
+    const moderationInputTokens = moderation.usage?.prompt_tokens ?? 0
+    const moderationOutputTokens = moderation.usage?.completion_tokens ?? 0
     await payload.create({
       collection: 'ai-usage',
       overrideAccess: true,
@@ -227,11 +247,14 @@ Do not claim integrations or facts not supplied.`
       data: {
         owner: user.id,
         project: project.id,
-        model: 'gpt-4.1-mini',
-        inputTokens,
-        outputTokens,
+        model: `${moderationModel} + ${generationModel}`,
+        inputTokens: inputTokens + moderationInputTokens,
+        outputTokens: outputTokens + moderationOutputTokens,
         estimatedCostUsd:
-          Math.round((inputTokens * 0.0000004 + outputTokens * 0.0000016) * 100000) / 100000,
+          (inputTokens * 0.0000002 +
+            outputTokens * 0.0000003 +
+            moderationInputTokens * 0.000000484 +
+            moderationOutputTokens * 0.00000003),
         moderationFlagged: false,
         status: 'completed',
       },
@@ -242,10 +265,16 @@ Do not claim integrations or facts not supplied.`
       message: 'Project generated and saved to your workspace.',
       output,
     }
-  } catch {
+  } catch (error) {
+    console.error(
+      JSON.stringify({
+        message: 'Workers AI project generation failed',
+        errorName: error instanceof Error ? error.name : 'UnknownError',
+      }),
+    )
     return {
       status: 'error',
-      message: 'Generation failed. Check the AI key and try again.',
+      message: 'Workers AI could not complete generation. Try again shortly.',
     }
   }
 }

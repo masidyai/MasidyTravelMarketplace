@@ -6,6 +6,9 @@
   "compatibility_date": "2026-11-21",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "workers_dev": true,
+  "ai": {
+    "binding": "AI",
+  },
   "vars": {
     "AUTH_URL": "https://masidy.travel",
   },

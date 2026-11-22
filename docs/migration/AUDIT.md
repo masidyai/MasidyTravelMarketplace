@@ -126,7 +126,7 @@ in the current application source.
 | Google sign-in         | `AUTH_GOOGLE_ID` or `GOOGLE_CLIENT_ID`, `AUTH_GOOGLE_SECRET` or `GOOGLE_CLIENT_SECRET`, `AUTH_SECRET`, `AUTH_URL` |
 | Resend email           | `RESEND_API_KEY`, `TRANSACTIONAL_EMAIL_FROM`                                                                      |
 | Turnstile              | `TURNSTILE_SECRET_KEY`, `NEXT_PUBLIC_TURNSTILE_SITE_KEY`                                                          |
-| OpenAI                 | `APP_OPENAI_API_KEY`                                                                                              |
+| Masidy Make AI         | Cloudflare Workers AI binding (`AI`)                                                                              |
 | Optional file scanning | `FILE_SCAN_API_URL`, `FILE_SCAN_API_KEY`                                                                          |
 | Cron                   | `CRON_SECRET`                                                                                                     |
 | Site                   | `NEXT_PUBLIC_SITE_URL`, `NEXTAUTH_URL`                                                                            |

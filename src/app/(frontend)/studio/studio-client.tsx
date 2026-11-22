@@ -88,7 +88,7 @@ export default function StudioClient({
               configured ? 'bg-emerald-400/15 text-emerald-300' : 'bg-amber-400/15 text-amber-300'
             }`}
           >
-            {configured ? 'AI connected' : 'Waiting for AI key'}
+            {configured ? 'Workers AI configured' : 'Workers AI unavailable'}
           </span>
         </div>
       </header>

@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { getCloudflareContext } from '@opennextjs/cloudflare'
 import { getCurrentUser } from '@/lib/current-user'
 import { getPayloadClient } from '@/lib/payload'
 import StudioClient from './studio-client'
@@ -8,6 +9,7 @@ export const dynamic = 'force-dynamic'
 export default async function StudioPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
+  const { env } = await getCloudflareContext({ async: true })
   const payload = await getPayloadClient()
   const [projects, brandKits] = await Promise.all([
     payload.find({
@@ -28,7 +30,7 @@ export default async function StudioPage() {
 
   return (
     <StudioClient
-      configured={Boolean(process.env.APP_OPENAI_API_KEY)}
+      configured={Boolean(env.AI)}
       role={user.role}
       brandKits={brandKits.docs.map((kit) => ({
         id: String(kit.id),
