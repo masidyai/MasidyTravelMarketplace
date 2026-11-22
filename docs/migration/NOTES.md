@@ -136,7 +136,13 @@ Approved by the owner before Phase 1 began.
   initialization. Page-data collection now requires `PAYLOAD_SECRET`, which
   has not been provided to the local build environment. Set it locally without
   sharing the value, then add it to the deployed Worker through Wrangler.
-- A staging Worker deployment has not been attempted.
+- The first Workers Builds deploy reached Wrangler but failed because CI
+  expects Worker `masidytravelmarketplace` while the config's self-service
+  binding targeted the nonexistent `masidy-staging` Worker. Account inspection
+  confirmed the CI Worker has no custom routes. The Wrangler worker name and
+  self-reference now match CI; all D1/R2 bindings remain on staging resources.
+- `masidy.travel` is not routed to the CI Worker; its current `Hello world`
+  response remains untouched.
 - The local `workerd` postinstall remains unapproved, so local Workers runtime
   preview has not been tested.
 - A Workers Builds log showed that `pnpm run build` invoked the Figma Payload
