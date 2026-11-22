@@ -2,31 +2,56 @@ import { sqliteD1Adapter } from '@payloadcms/db-d1-sqlite'
 import { r2Storage } from '@payloadcms/storage-r2'
 import { getCloudflareContext } from '@opennextjs/cloudflare'
 import { en as adminLanguage } from '@payloadcms/translations/languages/en'
-import { buildConfig, type CollectionConfig, type PayloadLogger } from 'payload'
+import { buildConfig, type PayloadLogger } from 'payload'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { GetPlatformProxyOptions } from 'wrangler'
 
 import { Admins } from './collections/Admins'
+import { AiProjects } from './collections/AiProjects'
+import { AiUsage } from './collections/AiUsage'
+import { Agencies } from './collections/Agencies'
+import { AgencyMemberships } from './collections/AgencyMemberships'
+import { AgentListings } from './collections/AgentListings'
+import { AgentProfiles } from './collections/AgentProfiles'
+import { Applications } from './collections/Applications'
 import { AuthAccounts } from './collections/AuthAccounts'
 import { AuthVerificationTokens } from './collections/AuthVerificationTokens'
+import { AuditLogs } from './collections/AuditLogs'
+import { BookingRequests } from './collections/BookingRequests'
+import { BrandKits } from './collections/BrandKits'
+import { Consents } from './collections/Consents'
+import { Conversations } from './collections/Conversations'
+import { DataRequests } from './collections/DataRequests'
+import { Departures } from './collections/Departures'
+import { Disputes } from './collections/Disputes'
+import { FinanceRules } from './collections/FinanceRules'
+import { Folders } from './collections/Folders'
+import { Invoices } from './collections/Invoices'
+import { LedgerEntries } from './collections/LedgerEntries'
+import { LegalPolicies } from './collections/LegalPolicies'
+import { Media } from './collections/Media'
+import { Messages } from './collections/Messages'
+import { Notifications } from './collections/Notifications'
+import { OrderChanges } from './collections/OrderChanges'
+import { Orders } from './collections/Orders'
+import { PaymentAccounts } from './collections/PaymentAccounts'
+import { PayoutStatements } from './collections/PayoutStatements'
+import { Proposals } from './collections/Proposals'
+import { RateLimits } from './collections/RateLimits'
+import { RefundRequests } from './collections/RefundRequests'
+import { ReservationHolds } from './collections/ReservationHolds'
+import { Reviews } from './collections/Reviews'
+import { SavedTrips } from './collections/SavedTrips'
+import { SecurityEvents } from './collections/SecurityEvents'
+import { SupportTickets } from './collections/SupportTickets'
+import { Tags } from './collections/Tags'
+import { TravelerFiles } from './collections/TravelerFiles'
+import { TravelerProfiles } from './collections/TravelerProfiles'
+import { Trips } from './collections/Trips'
 import { Users } from './collections/Users'
-
-const CloudflareMedia: CollectionConfig = {
-  slug: 'media',
-  access: {
-    create: ({ req }) => req.user?.collection === Admins.slug,
-    delete: ({ req }) => req.user?.collection === Admins.slug,
-    read: () => true,
-    update: ({ req }) => req.user?.collection === Admins.slug,
-  },
-  fields: [{ name: 'alt', type: 'text', required: true }],
-  upload: {
-    crop: false,
-    focalPoint: false,
-  },
-}
+import { Waitlists } from './collections/Waitlists'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -80,7 +105,52 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Admins, Users, AuthAccounts, AuthVerificationTokens, CloudflareMedia],
+  collections: [
+    Admins,
+    Users,
+    Media,
+    Folders,
+    Tags,
+    Agencies,
+    Trips,
+    AgentListings,
+    BookingRequests,
+    AuthAccounts,
+    AuthVerificationTokens,
+    AgencyMemberships,
+    Orders,
+    AiProjects,
+    Applications,
+    Departures,
+    SavedTrips,
+    Reviews,
+    SupportTickets,
+    AgentProfiles,
+    ReservationHolds,
+    Proposals,
+    Waitlists,
+    OrderChanges,
+    TravelerProfiles,
+    TravelerFiles,
+    Conversations,
+    Messages,
+    Notifications,
+    FinanceRules,
+    PaymentAccounts,
+    LedgerEntries,
+    Invoices,
+    RefundRequests,
+    BrandKits,
+    AiUsage,
+    LegalPolicies,
+    Consents,
+    DataRequests,
+    AuditLogs,
+    SecurityEvents,
+    RateLimits,
+    PayoutStatements,
+    Disputes,
+  ],
   graphQL: {
     disable: true,
   },
