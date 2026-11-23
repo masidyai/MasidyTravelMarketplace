@@ -19,19 +19,19 @@
   "d1_databases": [
     {
       "binding": "D1",
-      "database_name": "masidy-staging-db",
-      "database_id": "d9851218-a17e-4ec1-ad85-d3d725447513",
+      "database_name": "travel-marketplace-production",
+      "database_id": "187f344f-a995-441f-b698-6779f5ac9b13",
       "remote": true,
     },
   ],
   "r2_buckets": [
     {
       "binding": "R2",
-      "bucket_name": "masidy-staging-media",
+      "bucket_name": "travel-marketplace-media",
     },
     {
       "binding": "NEXT_INC_CACHE_R2_BUCKET",
-      "bucket_name": "masidy-staging-cache",
+      "bucket_name": "travel-marketplace-cache",
     },
   ],
   "services": [
