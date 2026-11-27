@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { ArrowRight, Check, Clock3, Plane, Search, ShieldCheck } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import type { FlightLocationSuggestion } from '@/lib/flight-locations'
-import type { FlightPassenger } from '@/lib/flight-validation'
+import type { FlightPassenger, FlightPassport } from '@/lib/flight-validation'
 import FlightLocationInput from './flight-location-input'
 
 type FlightSegment = {
@@ -30,9 +30,17 @@ type FlightOffer = {
   airline: string
   slices: FlightSlice[]
   expiresAt: string | null
+  passengerIdentityDocumentsRequired: boolean
 }
 
-type PassengerDraft = Omit<FlightPassenger, 'gender'> & { gender: '' | 'm' | 'f' }
+type PassengerDraft = Omit<FlightPassenger, 'gender' | 'passport'> & {
+  gender: '' | 'm' | 'f'
+  passport: FlightPassport
+}
+
+type FlightSearchProps = {
+  passportCountries: Array<{ code: string; name: string }>
+}
 
 const formatPrice = (amount: string, currency: string) =>
   new Intl.NumberFormat('en', {
@@ -50,9 +58,14 @@ const emptyPassenger = (): PassengerDraft => ({
   email: '',
   phone_number: '',
   gender: '',
+  passport: {
+    unique_identifier: '',
+    expires_on: '',
+    issuing_country_code: '',
+  },
 })
 
-export default function FlightSearch() {
+export default function FlightSearch({ passportCountries }: FlightSearchProps) {
   const [origin, setOrigin] = useState<FlightLocationSuggestion | null>(null)
   const [destination, setDestination] = useState<FlightLocationSuggestion | null>(null)
   const [departureDate, setDepartureDate] = useState('')
@@ -137,9 +150,23 @@ export default function FlightSearch() {
     )
   }
 
+  const updatePassengerPassport = (index: number, field: keyof FlightPassport, value: string) => {
+    setPassengers((current) =>
+      current.map((passenger, passengerIndex) =>
+        passengerIndex === index
+          ? { ...passenger, passport: { ...passenger.passport, [field]: value } }
+          : passenger,
+      ),
+    )
+  }
+
   const startCheckout = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!selectedOffer) return
+    if (selectedOffer.expiresAt && Date.parse(selectedOffer.expiresAt) <= Date.now()) {
+      setError('This flight quote has expired. Search again to check the latest price.')
+      return
+    }
 
     setCheckingOut(true)
     setError('')
@@ -437,85 +464,148 @@ export default function FlightSearch() {
             </p>
 
             <div className="mt-6 grid gap-6">
-              {passengers.map((passenger, index) => (
-                <fieldset
-                  key={index}
-                  className="grid gap-4 rounded-2xl bg-slate-50 p-4 sm:grid-cols-2 sm:p-5"
-                >
-                  <legend className="px-2 text-sm font-bold text-[#0c2f4d]">
-                    Traveller {index + 1}
-                  </legend>
-                  <label className="flex flex-col gap-2 text-sm font-semibold text-slate-700">
-                    Given name(s)
-                    <input
-                      required
-                      autoComplete="given-name"
-                      value={passenger.given_name}
-                      onChange={(event) => updatePassenger(index, 'given_name', event.target.value)}
-                      className="h-11 rounded-xl border border-slate-200 bg-white px-3 outline-none focus:border-[#087cb4] focus:ring-4 focus:ring-sky-100"
-                    />
-                  </label>
-                  <label className="flex flex-col gap-2 text-sm font-semibold text-slate-700">
-                    Family name
-                    <input
-                      required
-                      autoComplete="family-name"
-                      value={passenger.family_name}
-                      onChange={(event) =>
-                        updatePassenger(index, 'family_name', event.target.value)
-                      }
-                      className="h-11 rounded-xl border border-slate-200 bg-white px-3 outline-none focus:border-[#087cb4] focus:ring-4 focus:ring-sky-100"
-                    />
-                  </label>
-                  <label className="flex flex-col gap-2 text-sm font-semibold text-slate-700">
-                    Date of birth
-                    <input
-                      required
-                      type="date"
-                      value={passenger.born_on}
-                      onChange={(event) => updatePassenger(index, 'born_on', event.target.value)}
-                      className="h-11 rounded-xl border border-slate-200 bg-white px-3 outline-none focus:border-[#087cb4] focus:ring-4 focus:ring-sky-100"
-                    />
-                  </label>
-                  <label className="flex flex-col gap-2 text-sm font-semibold text-slate-700">
-                    Gender · optional
-                    <select
-                      value={passenger.gender}
-                      onChange={(event) => updatePassenger(index, 'gender', event.target.value)}
-                      className="h-11 rounded-xl border border-slate-200 bg-white px-3 outline-none focus:border-[#087cb4] focus:ring-4 focus:ring-sky-100"
-                    >
-                      <option value="">Not specified</option>
-                      <option value="f">Female</option>
-                      <option value="m">Male</option>
-                    </select>
-                  </label>
-                  <label className="flex flex-col gap-2 text-sm font-semibold text-slate-700">
-                    Contact email
-                    <input
-                      required
-                      type="email"
-                      autoComplete="email"
-                      value={passenger.email}
-                      onChange={(event) => updatePassenger(index, 'email', event.target.value)}
-                      className="h-11 rounded-xl border border-slate-200 bg-white px-3 outline-none focus:border-[#087cb4] focus:ring-4 focus:ring-sky-100"
-                    />
-                  </label>
-                  <label className="flex flex-col gap-2 text-sm font-semibold text-slate-700">
-                    Phone · include country code
-                    <input
-                      required
-                      type="tel"
-                      autoComplete="tel"
-                      placeholder="+447700900000"
-                      value={passenger.phone_number}
-                      onChange={(event) =>
-                        updatePassenger(index, 'phone_number', event.target.value)
-                      }
-                      className="h-11 rounded-xl border border-slate-200 bg-white px-3 outline-none focus:border-[#087cb4] focus:ring-4 focus:ring-sky-100"
-                    />
-                  </label>
-                </fieldset>
-              ))}
+              {passengers.map((passenger, index) => {
+                const passportRequired =
+                  selectedOffer.passengerIdentityDocumentsRequired ||
+                  Object.values(passenger.passport).some((value) => value.trim().length > 0)
+
+                return (
+                  <fieldset
+                    key={index}
+                    className="grid gap-4 rounded-2xl bg-slate-50 p-4 sm:grid-cols-2 sm:p-5"
+                  >
+                    <legend className="px-2 text-sm font-bold text-[#0c2f4d]">
+                      Traveller {index + 1}
+                    </legend>
+                    <label className="flex flex-col gap-2 text-sm font-semibold text-slate-700">
+                      Given name(s)
+                      <input
+                        required
+                        autoComplete="given-name"
+                        value={passenger.given_name}
+                        onChange={(event) =>
+                          updatePassenger(index, 'given_name', event.target.value)
+                        }
+                        className="h-11 rounded-xl border border-slate-200 bg-white px-3 outline-none focus:border-[#087cb4] focus:ring-4 focus:ring-sky-100"
+                      />
+                    </label>
+                    <label className="flex flex-col gap-2 text-sm font-semibold text-slate-700">
+                      Family name
+                      <input
+                        required
+                        autoComplete="family-name"
+                        value={passenger.family_name}
+                        onChange={(event) =>
+                          updatePassenger(index, 'family_name', event.target.value)
+                        }
+                        className="h-11 rounded-xl border border-slate-200 bg-white px-3 outline-none focus:border-[#087cb4] focus:ring-4 focus:ring-sky-100"
+                      />
+                    </label>
+                    <label className="flex flex-col gap-2 text-sm font-semibold text-slate-700">
+                      Date of birth
+                      <input
+                        required
+                        type="date"
+                        value={passenger.born_on}
+                        onChange={(event) => updatePassenger(index, 'born_on', event.target.value)}
+                        className="h-11 rounded-xl border border-slate-200 bg-white px-3 outline-none focus:border-[#087cb4] focus:ring-4 focus:ring-sky-100"
+                      />
+                    </label>
+                    <label className="flex flex-col gap-2 text-sm font-semibold text-slate-700">
+                      Gender · optional
+                      <select
+                        value={passenger.gender}
+                        onChange={(event) => updatePassenger(index, 'gender', event.target.value)}
+                        className="h-11 rounded-xl border border-slate-200 bg-white px-3 outline-none focus:border-[#087cb4] focus:ring-4 focus:ring-sky-100"
+                      >
+                        <option value="">Not specified</option>
+                        <option value="f">Female</option>
+                        <option value="m">Male</option>
+                      </select>
+                    </label>
+                    <label className="flex flex-col gap-2 text-sm font-semibold text-slate-700">
+                      Contact email
+                      <input
+                        required
+                        type="email"
+                        autoComplete="email"
+                        value={passenger.email}
+                        onChange={(event) => updatePassenger(index, 'email', event.target.value)}
+                        className="h-11 rounded-xl border border-slate-200 bg-white px-3 outline-none focus:border-[#087cb4] focus:ring-4 focus:ring-sky-100"
+                      />
+                    </label>
+                    <label className="flex flex-col gap-2 text-sm font-semibold text-slate-700">
+                      Phone · include country code
+                      <input
+                        required
+                        type="tel"
+                        autoComplete="tel"
+                        placeholder="+447700900000"
+                        value={passenger.phone_number}
+                        onChange={(event) =>
+                          updatePassenger(index, 'phone_number', event.target.value)
+                        }
+                        className="h-11 rounded-xl border border-slate-200 bg-white px-3 outline-none focus:border-[#087cb4] focus:ring-4 focus:ring-sky-100"
+                      />
+                    </label>
+                    <fieldset className="grid gap-4 rounded-xl border border-slate-200 bg-white p-4 sm:col-span-2 sm:grid-cols-3">
+                      <legend className="px-2 text-sm font-bold text-[#0c2f4d]">Passport</legend>
+                      <label className="flex flex-col gap-2 text-sm font-semibold text-slate-700">
+                        Passport number
+                        <input
+                          required={passportRequired}
+                          autoComplete="off"
+                          maxLength={30}
+                          value={passenger.passport.unique_identifier}
+                          onChange={(event) =>
+                            updatePassengerPassport(index, 'unique_identifier', event.target.value)
+                          }
+                          className="h-11 rounded-xl border border-slate-200 bg-white px-3 outline-none focus:border-[#087cb4] focus:ring-4 focus:ring-sky-100"
+                        />
+                      </label>
+                      <label className="flex flex-col gap-2 text-sm font-semibold text-slate-700">
+                        Passport expiry
+                        <input
+                          required={passportRequired}
+                          type="date"
+                          value={passenger.passport.expires_on}
+                          onChange={(event) =>
+                            updatePassengerPassport(index, 'expires_on', event.target.value)
+                          }
+                          className="h-11 rounded-xl border border-slate-200 bg-white px-3 outline-none focus:border-[#087cb4] focus:ring-4 focus:ring-sky-100"
+                        />
+                      </label>
+                      <label className="flex flex-col gap-2 text-sm font-semibold text-slate-700">
+                        Issuing country
+                        <select
+                          required={passportRequired}
+                          value={passenger.passport.issuing_country_code}
+                          onChange={(event) =>
+                            updatePassengerPassport(
+                              index,
+                              'issuing_country_code',
+                              event.target.value,
+                            )
+                          }
+                          className="h-11 rounded-xl border border-slate-200 bg-white px-3 outline-none focus:border-[#087cb4] focus:ring-4 focus:ring-sky-100"
+                        >
+                          <option value="">Select a country</option>
+                          {passportCountries.map((country) => (
+                            <option key={country.code} value={country.code}>
+                              {country.name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <p className="text-xs leading-5 text-slate-500 sm:col-span-3">
+                        {selectedOffer.passengerIdentityDocumentsRequired
+                          ? 'This airline requires passport details for this fare.'
+                          : 'Optional unless the airline requires passport details for this fare.'}
+                      </p>
+                    </fieldset>
+                  </fieldset>
+                )
+              })}
             </div>
 
             {signInRequired && (
@@ -538,8 +628,8 @@ export default function FlightSearch() {
 
             <div className="mt-6 flex flex-col gap-4 border-t border-slate-100 pt-6 sm:flex-row sm:items-center sm:justify-between">
               <p className="max-w-xl text-xs leading-5 text-slate-500">
-                Masidy places an airline hold, then confirms your ticket after Stripe payment. Live
-                fares can change before the hold is created.
+                Stripe securely collects your billing address and payment details. Masidy confirms
+                your ticket after payment; fares can change before an airline hold is created.
               </p>
               <button
                 type="submit"

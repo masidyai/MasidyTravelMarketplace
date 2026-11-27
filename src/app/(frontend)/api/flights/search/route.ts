@@ -29,7 +29,11 @@ type DuffelOffer = {
   total_currency: string
   owner?: { name?: string }
   slices: DuffelSlice[]
-  payment_requirements?: { requires_instant_payment?: boolean }
+  payment_requirements?: {
+    requires_instant_payment?: boolean
+    payment_required_by?: string | null
+  }
+  passenger_identity_documents_required?: boolean
   expires_at?: string
 }
 
@@ -54,6 +58,12 @@ function isValidAirport(airport: DuffelAirport | undefined): airport is DuffelAi
     typeof airport.name === 'string' &&
     (airport.city_name === undefined || typeof airport.city_name === 'string'),
   )
+}
+
+function isExpired(value: string | null | undefined) {
+  if (!value) return false
+  const expiresAt = Date.parse(value)
+  return !Number.isFinite(expiresAt) || expiresAt <= Date.now()
 }
 
 function summarizeOffer(offer: DuffelOffer) {
@@ -118,7 +128,11 @@ function summarizeOffer(offer: DuffelOffer) {
     currency: offer.total_currency,
     airline: offer.owner?.name || 'Airline',
     slices,
-    expiresAt: offer.expires_at || null,
+    expiresAt:
+      [offer.expires_at, offer.payment_requirements?.payment_required_by ?? undefined]
+        .filter((value): value is string => Boolean(value))
+        .sort((left, right) => Date.parse(left) - Date.parse(right))[0] || null,
+    passengerIdentityDocumentsRequired: offer.passenger_identity_documents_required === true,
   }
 }
 
@@ -206,7 +220,12 @@ export async function POST(request: Request) {
     }
 
     const offers = result.offers
-      .filter((offer) => offer.payment_requirements?.requires_instant_payment !== true)
+      .filter(
+        (offer) =>
+          offer.payment_requirements?.requires_instant_payment !== true &&
+          !isExpired(offer.expires_at) &&
+          !isExpired(offer.payment_requirements?.payment_required_by),
+      )
       .map(summarizeOffer)
       .filter((offer) => offer !== null)
       .sort(

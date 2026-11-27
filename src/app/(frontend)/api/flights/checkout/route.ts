@@ -4,7 +4,12 @@ import { duffelRequest, DuffelApiError, DuffelConfigurationError } from '@/lib/d
 import { getPayloadClient } from '@/lib/payload'
 import { enforceRateLimit } from '@/lib/rate-limit'
 import { getStripeClient } from '@/lib/stripe'
-import { parseFlightPassengers, toMinorUnits, type FlightPassenger } from '@/lib/flight-validation'
+import {
+  parseFlightPassengers,
+  toMinorUnits,
+  type FlightPassenger,
+  type FlightPassport,
+} from '@/lib/flight-validation'
 
 type DuffelAirport = {
   iata_code: string
@@ -33,7 +38,10 @@ type DuffelOffer = {
   total_currency: string
   owner?: { name?: string }
   slices: DuffelSlice[]
-  payment_requirements?: { requires_instant_payment?: boolean }
+  payment_requirements?: {
+    requires_instant_payment?: boolean
+    payment_required_by?: string | null
+  }
   passenger_identity_documents_required?: boolean
   expires_at?: string
 }
@@ -55,9 +63,10 @@ type DuffelOrder = {
   }
 }
 
-type DuffelOrderPassenger = FlightPassenger & {
+type DuffelOrderPassenger = Omit<FlightPassenger, 'passport'> & {
   id: string
   type: 'adult'
+  identity_documents?: Array<FlightPassport & { type: 'passport' }>
 }
 
 class FlightCheckoutError extends Error {
@@ -72,6 +81,12 @@ class FlightCheckoutError extends Error {
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
+
+function isExpired(value: string | null | undefined) {
+  if (!value) return false
+  const expiresAt = Date.parse(value)
+  return !Number.isFinite(expiresAt) || expiresAt <= Date.now()
+}
 
 function getItinerary(offer: DuffelOffer) {
   return {
@@ -161,6 +176,7 @@ export async function POST(request: Request) {
   const payload = await getPayloadClient()
   let booking: { id: string | number; reference: string } | undefined
   let checkoutSession: Awaited<ReturnType<typeof stripe.checkout.sessions.create>> | undefined
+  let duffelStep = 'offer request lookup'
 
   try {
     const offerRequest = await duffelRequest<DuffelOfferRequest>(
@@ -178,16 +194,26 @@ export async function POST(request: Request) {
       throw new FlightCheckoutError('That flight search is no longer available. Search again.', 409)
     }
 
+    duffelStep = 'offer lookup'
     const offer = await duffelRequest<DuffelOffer>(`/air/offers/${encodeURIComponent(offerId)}`)
     if (
       offer.id !== offerId ||
       offer.payment_requirements?.requires_instant_payment === true ||
-      offer.passenger_identity_documents_required === true ||
-      (offer.expires_at && Date.parse(offer.expires_at) <= Date.now())
+      isExpired(offer.expires_at) ||
+      isExpired(offer.payment_requirements?.payment_required_by)
     ) {
       throw new FlightCheckoutError(
-        'That flight can no longer be booked through secure checkout. Search again.',
+        'That fare has expired or cannot be held. Search again to see current prices.',
         409,
+      )
+    }
+    if (
+      offer.passenger_identity_documents_required === true &&
+      passengers.some((passenger) => !passenger.passport)
+    ) {
+      throw new FlightCheckoutError(
+        'This fare requires valid passport details for every traveller.',
+        400,
       )
     }
 
@@ -208,7 +234,7 @@ export async function POST(request: Request) {
         traveler: user.id,
         offerRequestId,
         offerId,
-        passengers,
+        passengers: passengers.map(({ passport, ...passenger }) => passenger),
         itinerary: getItinerary(offer),
         totalAmount: offer.total_amount,
         currency: offer.total_currency,
@@ -217,13 +243,22 @@ export async function POST(request: Request) {
     })
 
     const duffelPassengers: DuffelOrderPassenger[] = offerRequest.passengers.map(
-      (offerPassenger, index) => ({
-        ...passengers[index],
-        id: offerPassenger.id,
-        type: 'adult',
-      }),
+      (offerPassenger, index) => {
+        const { passport, ...passenger } = passengers[index]
+        return {
+          ...passenger,
+          id: offerPassenger.id,
+          type: 'adult',
+          ...(passport
+            ? {
+                identity_documents: [{ type: 'passport', ...passport }],
+              }
+            : {}),
+        }
+      },
     )
 
+    duffelStep = 'hold creation'
     const order = await duffelRequest<DuffelOrder>('/air/orders', {
       method: 'POST',
       body: JSON.stringify({
@@ -282,6 +317,7 @@ export async function POST(request: Request) {
       {
         mode: 'payment',
         allowed_payment_method_types: ['card'],
+        billing_address_collection: 'required',
         customer_email: user.email,
         expires_at: expiresAt,
         success_url: `${checkoutOrigin}/flights/confirmation?session_id={CHECKOUT_SESSION_ID}`,
@@ -357,18 +393,19 @@ export async function POST(request: Request) {
     }
     if (error instanceof DuffelApiError) {
       console.error('[flight-checkout] Duffel request failed', {
+        stage: duffelStep,
         status: error.status,
         code: error.code,
       })
-      return Response.json(
-        {
-          error:
-            error.status >= 500
-              ? 'Duffel could not hold that flight. Search again and retry.'
-              : 'That flight is no longer available at the displayed price. Search again.',
-        },
-        { status: error.status >= 500 ? 502 : 409 },
-      )
+      const message =
+        error.status >= 500
+          ? 'Duffel could not hold that flight. Search again and retry.'
+          : duffelStep === 'hold creation'
+            ? error.code === 'not_valid_with_selected_offer'
+              ? 'The fare is no longer eligible for an airline hold. Search again for a current fare.'
+              : 'The airline rejected this fare or traveller information. Check the passport details if required, then try another flight.'
+            : 'This flight quote has expired or changed. Search again to view current prices.'
+      return Response.json({ error: message }, { status: error.status >= 500 ? 502 : 409 })
     }
     console.error('[flight-checkout] Unexpected checkout failure')
     return Response.json(

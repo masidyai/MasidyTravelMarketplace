@@ -1,3 +1,11 @@
+import duffelCountries from '@/data/duffel-countries.json'
+
+export type FlightPassport = {
+  unique_identifier: string
+  expires_on: string
+  issuing_country_code: string
+}
+
 export type FlightPassenger = {
   given_name: string
   family_name: string
@@ -5,15 +13,49 @@ export type FlightPassenger = {
   email: string
   phone_number: string
   gender?: 'm' | 'f'
+  passport?: FlightPassport
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
 
+const passportCountryCodes = new Set(duffelCountries.countries.map((country) => country.code))
+
 const isValidDate = (value: string) => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
   const date = new Date(`${value}T00:00:00.000Z`)
   return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value
+}
+
+function parseFlightPassport(value: unknown): FlightPassport | undefined | null {
+  if (!isRecord(value)) return null
+
+  const allowedKeys = new Set(['unique_identifier', 'expires_on', 'issuing_country_code'])
+  if (Object.keys(value).some((key) => !allowedKeys.has(key))) return null
+
+  const uniqueIdentifier =
+    typeof value.unique_identifier === 'string' ? value.unique_identifier.trim() : ''
+  const expiresOn = typeof value.expires_on === 'string' ? value.expires_on : ''
+  const issuingCountryCode =
+    typeof value.issuing_country_code === 'string'
+      ? value.issuing_country_code.trim().toUpperCase()
+      : ''
+
+  if (!uniqueIdentifier && !expiresOn && !issuingCountryCode) return undefined
+  if (
+    !/^[A-Za-z0-9-]{1,30}$/.test(uniqueIdentifier) ||
+    !isValidDate(expiresOn) ||
+    expiresOn <= new Date().toISOString().slice(0, 10) ||
+    !passportCountryCodes.has(issuingCountryCode)
+  ) {
+    return null
+  }
+
+  return {
+    unique_identifier: uniqueIdentifier,
+    expires_on: expiresOn,
+    issuing_country_code: issuingCountryCode,
+  }
 }
 
 const isAdult = (birthDate: string) => {
@@ -42,6 +84,7 @@ export function parseFlightPassengers(value: unknown): FlightPassenger[] | null 
       'email',
       'phone_number',
       'gender',
+      'passport',
     ])
     if (Object.keys(candidate).some((key) => !allowedKeys.has(key))) return null
 
@@ -52,6 +95,8 @@ export function parseFlightPassengers(value: unknown): FlightPassenger[] | null 
     const phoneNumber =
       typeof candidate.phone_number === 'string' ? candidate.phone_number.trim() : ''
     const gender = candidate.gender
+    const passport =
+      candidate.passport === undefined ? undefined : parseFlightPassport(candidate.passport)
 
     if (
       givenName.length < 1 ||
@@ -65,7 +110,8 @@ export function parseFlightPassengers(value: unknown): FlightPassenger[] | null 
       email.length > 254 ||
       !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) ||
       !/^\+[1-9]\d{6,14}$/.test(phoneNumber) ||
-      (gender !== undefined && gender !== '' && gender !== 'm' && gender !== 'f')
+      (gender !== undefined && gender !== '' && gender !== 'm' && gender !== 'f') ||
+      passport === null
     ) {
       return null
     }
@@ -77,6 +123,7 @@ export function parseFlightPassengers(value: unknown): FlightPassenger[] | null 
       email,
       phone_number: phoneNumber,
       ...(gender === 'm' || gender === 'f' ? { gender } : {}),
+      ...(passport ? { passport } : {}),
     })
   }
 

@@ -103,14 +103,26 @@ const cities = [...cityIndex.values()]
   .sort((left, right) => left.name.localeCompare(right.name) || left.code.localeCompare(right.code))
 
 const outputPath = join(dirname(fileURLToPath(import.meta.url)), '../src/data/duffel-cities.json')
+const countryNames = new Intl.DisplayNames(['en'], { type: 'region' })
+const countryCodes = [...new Set(cities.map((city) => city.countryCode))].sort()
+const countries = countryCodes.map((code) => ({
+  code,
+  name: countryNames.of(code) || code,
+}))
+
 await mkdir(dirname(outputPath), { recursive: true })
 await writeFile(
   outputPath,
   `${JSON.stringify({ source: 'Duffel /air/cities + /air/airports', generatedAt: new Date().toISOString(), cities })}\n`,
 )
+await writeFile(
+  join(dirname(outputPath), 'duffel-countries.json'),
+  `${JSON.stringify({ source: 'Duffel /air/cities + /air/airports', countries })}\n`,
+)
 
 const airportCount = cities.reduce((count, city) => count + city.airports.length, 0)
 console.log(
-  `Updated Duffel location directory: ${cities.length} cities and ${airportCount} airports ` +
-    `(${cityDirectory.pages} city pages, ${airportDirectory.pages} airport pages).`,
+  `Updated Duffel directory: ${cities.length} cities, ${airportCount} airports, and ` +
+    `${countries.length} passport issuing countries (${cityDirectory.pages} city pages, ` +
+    `${airportDirectory.pages} airport pages).`,
 )

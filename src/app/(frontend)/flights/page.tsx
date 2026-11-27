@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import duffelCountries from '@/data/duffel-countries.json'
 import FlightSearch from './flight-search'
 
 export const metadata: Metadata = {
@@ -7,5 +8,5 @@ export const metadata: Metadata = {
 }
 
 export default function FlightsPage() {
-  return <FlightSearch />
+  return <FlightSearch passportCountries={duffelCountries.countries} />
 }
