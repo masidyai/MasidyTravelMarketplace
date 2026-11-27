@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { getPayloadClient } from '@/lib/payload'
 import { getStripeClient } from '@/lib/stripe'
 import { sendTransactionalEmail } from '@/lib/email'
+import { expireFlightBooking, fulfillFlightBooking } from '@/lib/flight-booking'
 
 export async function POST(request: Request) {
   const stripe = getStripeClient()
@@ -22,6 +23,10 @@ export async function POST(request: Request) {
 
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object
+    if (session.metadata?.flightBookingId) {
+      await fulfillFlightBooking(session, stripe)
+      return new Response('ok')
+    }
     const orderId = session.metadata?.orderId
     if (orderId) {
       const payload = await getPayloadClient()
@@ -231,6 +236,8 @@ export async function POST(request: Request) {
         }
       }
     }
+  } else if (event.type === 'checkout.session.expired') {
+    await expireFlightBooking(event.data.object)
   } else if (event.type === 'account.updated') {
     const account = event.data.object
     const payload = await getPayloadClient()

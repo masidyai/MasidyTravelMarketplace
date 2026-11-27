@@ -27,6 +27,7 @@ import { DataRequests } from './collections/DataRequests'
 import { Departures } from './collections/Departures'
 import { Disputes } from './collections/Disputes'
 import { FinanceRules } from './collections/FinanceRules'
+import { FlightBookings } from './collections/FlightBookings'
 import { Folders } from './collections/Folders'
 import { Invoices } from './collections/Invoices'
 import { LedgerEntries } from './collections/LedgerEntries'
@@ -150,6 +151,7 @@ export default buildConfig({
     RateLimits,
     PayoutStatements,
     Disputes,
+    FlightBookings,
   ],
   graphQL: {
     disable: true,

@@ -47,6 +47,7 @@ import { SecurityEvents } from './collections/SecurityEvents'
 import { RateLimits } from './collections/RateLimits'
 import { PayoutStatements } from './collections/PayoutStatements'
 import { Disputes } from './collections/Disputes'
+import { FlightBookings } from './collections/FlightBookings'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -115,6 +116,7 @@ export default buildFigmaConfig({
     RateLimits,
     PayoutStatements,
     Disputes,
+    FlightBookings,
   ],
   typescript: {
     outputFile: path.resolve(dirname, 'payload-types.ts'),

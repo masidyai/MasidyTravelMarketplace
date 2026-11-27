@@ -204,6 +204,9 @@ export default function Marketplace({ trips, agencies, demoTrips }: MarketplaceP
             <a className="transition hover:text-[#087cb4]" href="#how">
               How it works
             </a>
+            <Link className="transition hover:text-[#087cb4]" href="/flights">
+              Flights
+            </Link>
             <a className="transition hover:text-[#087cb4]" href="/demo">
               Live demo
             </a>
@@ -239,6 +242,7 @@ export default function Marketplace({ trips, agencies, demoTrips }: MarketplaceP
               ['Agencies', '#agencies'],
               ['For agents', '#agents'],
               ['How it works', '#how'],
+              ['Flights', '/flights'],
               ['Live demo', '/demo'],
               ['Sign in', '/login'],
             ].map(([label, href]) => (
@@ -993,6 +997,7 @@ export default function Marketplace({ trips, agencies, demoTrips }: MarketplaceP
             <a href="#agencies">Agencies</a>
             <a href="#agents">For agents</a>
             <a href="#how">How it works</a>
+            <Link href="/flights">Flights</Link>
             <a href="/demo">Live demo</a>
             <a href="/admin">Agency portal</a>
             <Link href="/legal/terms">Terms</Link>
