@@ -230,7 +230,12 @@ export async function POST(request: Request) {
         code: error.code,
       })
       return Response.json(
-        { error: 'Duffel could not complete that search. Please try again.' },
+        {
+          error:
+            error.code === 'invalid_iata_code'
+              ? 'One of these airport codes is not recognized by Duffel. Use a supported three-letter airport IATA code.'
+              : 'Duffel could not complete that search. Please try again.',
+        },
         { status: error.status >= 500 ? 502 : 400 },
       )
     }
