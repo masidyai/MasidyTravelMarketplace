@@ -4,7 +4,9 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { ArrowRight, Check, Clock3, Plane, Search, ShieldCheck } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
+import type { FlightLocationSuggestion } from '@/lib/flight-locations'
 import type { FlightPassenger } from '@/lib/flight-validation'
+import FlightLocationInput from './flight-location-input'
 
 type FlightSegment = {
   airline: string
@@ -51,8 +53,8 @@ const emptyPassenger = (): PassengerDraft => ({
 })
 
 export default function FlightSearch() {
-  const [origin, setOrigin] = useState('')
-  const [destination, setDestination] = useState('')
+  const [origin, setOrigin] = useState<FlightLocationSuggestion | null>(null)
+  const [destination, setDestination] = useState<FlightLocationSuggestion | null>(null)
   const [departureDate, setDepartureDate] = useState('')
   const [returnDate, setReturnDate] = useState('')
   const [passengerCount, setPassengerCount] = useState(1)
@@ -70,6 +72,10 @@ export default function FlightSearch() {
 
   const searchFlights = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    if (!origin || !destination) {
+      setError('Choose a city or airport from the suggestions for both locations.')
+      return
+    }
     setSearching(true)
     setError('')
     setSignInRequired(false)
@@ -82,8 +88,8 @@ export default function FlightSearch() {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          origin,
-          destination,
+          origin: origin.code,
+          destination: destination.code,
           departureDate,
           returnDate,
           passengers: passengerCount,
@@ -197,32 +203,18 @@ export default function FlightSearch() {
           onSubmit={searchFlights}
           className="mt-9 grid gap-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_20px_60px_rgba(12,38,60,.07)] sm:grid-cols-2 sm:p-7 lg:grid-cols-6"
         >
-          <label className="flex flex-col gap-2 text-sm font-semibold text-slate-700 lg:col-span-1">
-            From · IATA code
-            <input
-              required
-              maxLength={3}
-              pattern="[A-Za-z]{3}"
-              autoCapitalize="characters"
-              value={origin}
-              onChange={(event) => setOrigin(event.target.value.toUpperCase())}
-              placeholder="LHR"
-              className="h-12 rounded-xl border border-slate-200 px-4 text-base uppercase outline-none transition focus:border-[#087cb4] focus:ring-4 focus:ring-sky-100"
-            />
-          </label>
-          <label className="flex flex-col gap-2 text-sm font-semibold text-slate-700 lg:col-span-1">
-            To · IATA code
-            <input
-              required
-              maxLength={3}
-              pattern="[A-Za-z]{3}"
-              autoCapitalize="characters"
-              value={destination}
-              onChange={(event) => setDestination(event.target.value.toUpperCase())}
-              placeholder="JFK"
-              className="h-12 rounded-xl border border-slate-200 px-4 text-base uppercase outline-none transition focus:border-[#087cb4] focus:ring-4 focus:ring-sky-100"
-            />
-          </label>
+          <FlightLocationInput
+            label="From"
+            placeholder="City, country, or airport"
+            value={origin}
+            onSelect={setOrigin}
+          />
+          <FlightLocationInput
+            label="To"
+            placeholder="City, country, or airport"
+            value={destination}
+            onSelect={setDestination}
+          />
           <label className="flex flex-col gap-2 text-sm font-semibold text-slate-700 lg:col-span-1">
             Depart
             <input

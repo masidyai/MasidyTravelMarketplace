@@ -9,6 +9,7 @@
     "figma:build": "NODE_OPTIONS=--no-deprecation payload build",
     "start": "NODE_OPTIONS=--no-deprecation next start",
     "format": "oxfmt",
+    "sync:duffel-cities": "node --env-file=.env.local scripts/sync-duffel-cities.mjs",
     "test:smoke": "node scripts/production-smoke.mjs",
     "test:production": "pnpm test:smoke && node scripts/production-quality.mjs",
     "cloudflare:build": "opennextjs-cloudflare build",
