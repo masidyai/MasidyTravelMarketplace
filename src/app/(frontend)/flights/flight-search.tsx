@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { ArrowRight, Check, Clock3, Plane, Search, ShieldCheck } from 'lucide-react'
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import type { FlightLocationSuggestion } from '@/lib/flight-locations'
 import type { FlightPassenger } from '@/lib/flight-validation'
 import FlightLocationInput from './flight-location-input'
@@ -67,8 +67,16 @@ export default function FlightSearch() {
   const [checkingOut, setCheckingOut] = useState(false)
   const [error, setError] = useState('')
   const [signInRequired, setSignInRequired] = useState(false)
+  const passengerFormRef = useRef<HTMLFormElement>(null)
 
   const selectedOffer = offers.find((offer) => offer.id === selectedOfferId)
+
+  useEffect(() => {
+    if (!selectedOfferId || !passengerFormRef.current) return
+
+    passengerFormRef.current.scrollIntoView({ behavior: 'instant', block: 'start' })
+    passengerFormRef.current.querySelector('input')?.focus({ preventScroll: true })
+  }, [selectedOfferId])
 
   const searchFlights = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -410,8 +418,9 @@ export default function FlightSearch() {
 
         {selectedOffer && (
           <form
+            ref={passengerFormRef}
             onSubmit={startCheckout}
-            className="mt-10 rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_20px_60px_rgba(12,38,60,.06)] sm:p-8"
+            className="mt-10 scroll-mt-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_20px_60px_rgba(12,38,60,.06)] sm:p-8"
           >
             <div className="flex flex-col gap-2 border-b border-slate-100 pb-5 sm:flex-row sm:items-end sm:justify-between">
               <div>
